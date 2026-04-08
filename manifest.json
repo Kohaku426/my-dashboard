@@ -1,0 +1,15 @@
+{
+  "name": "マイダッシュボード",
+  "short_name": "マイダッシュ",
+  "description": "就活・健康管理ダッシュボード",
+  "start_url": "/my-dashboard/",
+  "scope": "/my-dashboard/",
+  "display": "standalone",
+  "background_color": "#060610",
+  "theme_color": "#060610",
+  "orientation": "portrait-primary",
+  "lang": "ja",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
