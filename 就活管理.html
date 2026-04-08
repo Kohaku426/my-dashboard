@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>就活管理ボード</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --card: rgba(255,255,255,0.05);
+    --card-hover: rgba(255,255,255,0.09);
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f0f8;
+    --muted: #888;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --pink: #ec4899;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    padding: 20px 24px 16px;
+    position: sticky; top: 0; z-index: 50;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  header h1 { font-size: 1.25rem; font-weight: 800; background: linear-gradient(135deg, #a78bfa, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.02em; }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+  .stat { background: rgba(255,255,255,0.07); border: 1px solid var(--border); padding: 6px 14px; border-radius: 30px; text-align: center; }
+  .stat-num { font-size: 1.1rem; font-weight: 800; }
+  .stat-label { font-size: 0.65rem; color: var(--muted); }
+  .stat.s-offer .stat-num { color: var(--green); }
+  .stat.s-active .stat-num { color: var(--accent2); }
+
+  /* TOOLBAR */
+  .toolbar {
+    padding: 12px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  input, select, textarea {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); background: rgba(124,58,237,0.1); }
+  input::placeholder { color: #555; }
+  select option { background: #1a1a2e; }
+  .toolbar input { width: 180px; }
+  .btn {
+    padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 700; transition: all 0.2s; letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #7c3aed, #6366f1);
+    color: white; box-shadow: 0 0 20px rgba(124,58,237,0.4);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 30px rgba(124,58,237,0.6); }
+  .btn-ghost { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+  .btn-danger { background: rgba(239,68,68,0.15); color: #f87171; font-size: 0.72rem; padding: 3px 8px; border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger:hover { background: rgba(239,68,68,0.3); }
+
+  /* BOARD */
+  .board {
+    display: flex; gap: 14px; padding: 20px 24px;
+    overflow-x: auto; min-height: calc(100vh - 130px);
+    scrollbar-width: thin; scrollbar-color: #333 transparent;
+  }
+  .board::-webkit-scrollbar { height: 6px; }
+  .board::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+  .column {
+    flex-shrink: 0; width: 230px;
+    display: flex; flex-direction: column;
+    max-height: calc(100vh - 150px);
+  }
+  .col-header {
+    padding: 10px 14px; border-radius: 10px 10px 0 0;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: none;
+  }
+  .col-header-title { font-size: 0.82rem; font-weight: 700; }
+  .col-count {
+    background: rgba(255,255,255,0.15); border-radius: 20px;
+    padding: 2px 8px; font-size: 0.75rem; font-weight: 700;
+  }
+  .col-body {
+    flex: 1; overflow-y: auto; padding: 8px;
+    background: rgba(255,255,255,0.025);
+    border-radius: 0 0 10px 10px;
+    border: 1px solid var(--border); border-top: none;
+    display: flex; flex-direction: column; gap: 8px;
+    min-height: 80px;
+    scrollbar-width: thin; scrollbar-color: #333 transparent;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .col-body.drag-over { background: rgba(124,58,237,0.1); border-color: var(--accent); }
+
+  /* Column accent colors */
+  .col-wish .col-header    { background: linear-gradient(135deg,#312e81,#4338ca); }
+  .col-applied .col-header { background: linear-gradient(135deg,#1e3a5f,#2563eb); }
+  .col-screen .col-header  { background: linear-gradient(135deg,#78350f,#d97706); }
+  .col-interview .col-header { background: linear-gradient(135deg,#4c1d95,#7c3aed); }
+  .col-final .col-header   { background: linear-gradient(135deg,#831843,#db2777); }
+  .col-offer .col-header   { background: linear-gradient(135deg,#064e3b,#059669); }
+  .col-reject .col-header  { background: linear-gradient(135deg,#1f2937,#4b5563); }
+
+  /* CARD */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    cursor: grab;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    border-radius: 10px 0 0 10px;
+  }
+  .card.priority-high::before { background: var(--red); }
+  .card.priority-mid::before  { background: var(--yellow); }
+  .card.priority-low::before  { background: #4b5563; }
+  .card:hover { background: var(--card-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.15); }
+  .card:active { cursor: grabbing; }
+  .card.dragging { opacity: 0.4; transform: rotate(2deg); }
+  .card-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; margin-left: 4px; }
+  .card-meta { font-size: 0.73rem; color: var(--muted); margin-left: 4px; }
+  .card-date { font-size: 0.7rem; color: var(--accent2); margin-top: 5px; margin-left: 4px; }
+  .card-note {
+    font-size: 0.73rem; color: #aaa;
+    margin-top: 6px; background: rgba(255,255,255,0.04);
+    padding: 5px 8px; border-radius: 6px; line-height: 1.4;
+  }
+  .card-actions { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .card-move {
+    font-size: 0.7rem; padding: 3px 7px;
+    background: rgba(255,255,255,0.07); border: 1px solid var(--border);
+    border-radius: 5px; cursor: pointer; color: var(--muted);
+    transition: all 0.15s;
+  }
+  .card-move:hover { background: rgba(255,255,255,0.15); color: var(--text); }
+  .priority-badge {
+    display: inline-block; font-size: 0.65rem; font-weight: 700;
+    padding: 1px 6px; border-radius: 8px; margin-left: 4px; margin-top: 4px;
+  }
+  .pb-high { background: rgba(239,68,68,0.2); color: #f87171; }
+  .pb-mid  { background: rgba(245,158,11,0.2); color: #fbbf24; }
+  .pb-low  { background: rgba(107,114,128,0.2); color: #9ca3af; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); z-index: 200;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(6px);
+  }
+  .modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: #16162a;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    padding: 28px;
+    width: 440px; max-width: 95vw;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal h2 { font-size: 1.1rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(135deg, #a78bfa, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; }
+  .form-group textarea { height: 75px; resize: vertical; }
+  .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .btn-cancel { background: rgba(255,255,255,0.06); color: var(--muted); border: 1px solid var(--border); }
+  .btn-cancel:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+  /* Export/Import */
+  .io-btns { display: flex; gap: 6px; }
+
+  /* Mobile */
+  @media(max-width:600px){
+    header { padding: 14px 16px; }
+    .board { padding: 14px 12px; gap: 10px; }
+    .toolbar { padding: 10px 12px; }
+    .column { width: 200px; }
+    .toolbar input { width: 140px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <h1>🚀 就活管理ボード</h1>
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="total-count">0</div><div class="stat-label">総企業</div></div>
+      <div class="stat s-active"><div class="stat-num" id="active-count">0</div><div class="stat-label">選考中</div></div>
+      <div class="stat s-offer"><div class="stat-num" id="offer-count">0</div><div class="stat-label">内定</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <input type="text" id="new-company" placeholder="企業名..." />
+  <button class="btn btn-primary" onclick="openAddModal()">＋ 追加</button>
+  <div class="io-btns" style="margin-left:auto">
+    <button class="btn btn-ghost" onclick="exportData()">📤 エクスポート</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">📥 インポート</button>
+    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)" />
+  </div>
+</div>
+
+<div class="board" id="board">
+  <div class="column col-wish"      data-col="wish">
+    <div class="col-header"><span class="col-header-title">👀 気になる</span><span class="col-count">0</span></div>
+    <div class="col-body" id="col-wish"></div>
+  </div>
+  <div class="column col-applied"   data-col="applied">
+    <div class="col-header"><span class="col-header-title">📝 ES/応募中</span><span class="col-count">0</span></div>
+    <div class="col-body" id="col-applied"></div>
+  </div>
+  <div class="column col-screen"    data-col="screen">
+    <div class="col-header"><span class="col-header-title">📋 書類選考</span><span class="col-count">0</span></div>
+    <div class="col-body" id="col-screen"></div>
+  </div>
+  <div class="column col-interview" data-col="interview">
+    <div class="col-header"><span class="col-header-title">🎤 面接中</span><span class="col-count">0</span></div>
+    <div class="col-body" id="col-interview"></div>
+  </div>
+  <div class="column col-final"     data-col="final">
+    <div class="col-header"><span class="col-header-title">🔥 最終面接</span><span class="col-count">0</span></div>
+    <div class="col-body" id="col-final"></div>
+  </div>
+  <div class="column col-offer"     data-col="offer">
+    <div class="col-header"><span class="col-header-title">🎉 内定</span><span class="col-count">0</span></div>
+    <div class="col-body" id="col-offer"></div>
+  </div>
+  <div class="column col-reject"    data-col="reject">
+    <div class="col-header"><span class="col-header-title">💤 終了/辞退</span><span class="col-count">0</span></div>
+    <div class="col-body" id="col-reject"></div>
+  </div>
+</div>
+
+<!-- 追加モーダル -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <h2>✨ 企業を追加</h2>
+    <div class="form-group"><label>企業名 *</label><input type="text" id="m-company" placeholder="例：株式会社○○" /></div>
+    <div class="form-group"><label>職種</label><input type="text" id="m-role" placeholder="例：エンジニア、営業" /></div>
+    <div class="form-group">
+      <label>ステージ</label>
+      <select id="m-stage">
+        <option value="wish">気になる</option><option value="applied">ES/応募中</option>
+        <option value="screen">書類選考中</option><option value="interview">面接中</option>
+        <option value="final">最終面接</option><option value="offer">内定</option><option value="reject">終了/辞退</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>志望度</label>
+      <select id="m-priority">
+        <option value="high">🔴 高</option><option value="mid">🟡 中</option><option value="low">⚪ 低</option>
+      </select>
+    </div>
+    <div class="form-group"><label>締め切り・面接日</label><input type="date" id="m-date" /></div>
+    <div class="form-group"><label>メモ</label><textarea id="m-note" placeholder="印象、OB情報、準備することなど..."></textarea></div>
+    <div class="modal-btns">
+      <button class="btn btn-cancel" onclick="closeModal('modal-add')">キャンセル</button>
+      <button class="btn btn-primary" onclick="addCompany()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STAGES = ['wish','applied','screen','interview','final','offer','reject'];
+let companies = JSON.parse(localStorage.getItem('shukatsu-v3') || '[]');
+let dragId = null;
+
+function save() { localStorage.setItem('shukatsu-v3', JSON.stringify(companies)); }
+
+function render() {
+  STAGES.forEach(stage => {
+    const col = document.getElementById('col-' + stage);
+    col.innerHTML = '';
+    const list = companies.filter(c => c.stage === stage);
+    list.forEach(c => col.appendChild(createCard(c)));
+    document.querySelector(`[data-col="${stage}"] .col-count`).textContent = list.length;
+  });
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('total-count').textContent = companies.length;
+  document.getElementById('active-count').textContent = companies.filter(c=>['applied','screen','interview','final'].includes(c.stage)).length;
+  document.getElementById('offer-count').textContent = companies.filter(c=>c.stage==='offer').length;
+}
+
+function createCard(c) {
+  const div = document.createElement('div');
+  div.className = `card priority-${c.priority}`;
+  div.draggable = true;
+  div.dataset.id = c.id;
+  const idx = STAGES.indexOf(c.stage);
+  const pbLabel = {high:'志望高',mid:'志望中',low:'志望低'}[c.priority];
+  const pbClass = 'pb-' + c.priority;
+  div.innerHTML = `
+    <div class="card-name">${c.name}</div>
+    ${c.role ? `<div class="card-meta">💼 ${c.role}</div>` : ''}
+    <span class="priority-badge ${pbClass}">${pbLabel}</span>
+    ${c.date ? `<div class="card-date">📅 ${c.date}</div>` : ''}
+    ${c.note ? `<div class="card-note">${c.note}</div>` : ''}
+    <div class="card-actions">
+      ${idx > 0 ? `<button class="card-move" onclick="moveCard('${c.id}',-1)">◀</button>` : ''}
+      ${idx < STAGES.length-1 ? `<button class="card-move" onclick="moveCard('${c.id}',1)">▶</button>` : ''}
+      <button class="btn btn-danger" onclick="deleteCard('${c.id}')">削除</button>
+    </div>`;
+  div.addEventListener('dragstart', () => { dragId = c.id; setTimeout(()=>div.classList.add('dragging'),0); });
+  div.addEventListener('dragend', () => { dragId = null; div.classList.remove('dragging'); });
+  return div;
+}
+
+function moveCard(id, dir) {
+  const c = companies.find(x => x.id === id);
+  if (!c) return;
+  const idx = STAGES.indexOf(c.stage) + dir;
+  if (idx >= 0 && idx < STAGES.length) { c.stage = STAGES[idx]; save(); render(); }
+}
+function deleteCard(id) {
+  if (!confirm('削除しますか？')) return;
+  companies = companies.filter(c => c.id !== id);
+  save(); render();
+}
+
+document.querySelectorAll('.col-body').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    if (!dragId) return;
+    const stage = zone.id.replace('col-', '');
+    const c = companies.find(x => x.id === dragId);
+    if (c) { c.stage = stage; save(); render(); }
+  });
+});
+
+function openAddModal() {
+  document.getElementById('m-company').value = document.getElementById('new-company').value;
+  ['m-role','m-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('m-date').value = '';
+  document.getElementById('modal-add').classList.add('open');
+  setTimeout(() => document.getElementById('m-company').focus(), 100);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function addCompany() {
+  const name = document.getElementById('m-company').value.trim();
+  if (!name) { alert('企業名を入力してください'); return; }
+  companies.push({
+    id: Date.now().toString(), name,
+    role: document.getElementById('m-role').value.trim(),
+    stage: document.getElementById('m-stage').value,
+    priority: document.getElementById('m-priority').value,
+    date: document.getElementById('m-date').value,
+    note: document.getElementById('m-note').value.trim(),
+    created: new Date().toISOString()
+  });
+  save(); render();
+  closeModal('modal-add');
+  document.getElementById('new-company').value = '';
+}
+document.getElementById('m-company').addEventListener('keydown', e => { if(e.key==='Enter') addCompany(); });
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(companies, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `就活データ_${new Date().toLocaleDateString('ja')}.json`;
+  a.click();
+}
+function importData(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if(confirm(`${imported.length}件のデータをインポートします。現在のデータは上書きされます。`)) {
+        companies = imported; save(); render();
+      }
+    } catch { alert('ファイルの読み込みに失敗しました'); }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+render();
+</script>
+</body>
+</html>
